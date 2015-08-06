@@ -26,6 +26,9 @@
     <link rel="stylesheet" href="assets/css/color-chooser.css" type="text/css" media="all" />
 
 
+
+    <script type="text/javascript" src="EasePack.min.js"></script>
+  <script type="text/javascript" src="TweenLite.min.js"></script>
     
     <!--[if lt IE 9]>
         <script src="assets/js/html5.js"></script>
@@ -43,7 +46,10 @@
 
 
     <section id="hero" class="light">
-      <div id="beast" style="height: 100%; width: 100%; background-color: ; position: absolute;"></div>
+      <!--<div id="beast" style="height: 100%; width: 100%; background-color: ; position: absolute;"></div>-->
+      <div id="large-header" style="height: 100%; width: 100%; position: fixed">
+        <canvas id="demo-canvas" style="height: 100%; width: 100%; background-color: rgba(255,255,255,0.3); position: absolute;"></canvas>
+      </div>
     
       <div class="container">
 
@@ -58,7 +64,7 @@
               <li><a href="#"><span class="fa fa-instagram"></span></a>
             </ul>
           </nav> -->
-          <div class="hero-content text-center ">
+          <div class="hero-content text-center " style="color: black;">
             <div class="hero-small">
                <hr /><span><span class="fa fa-calendar"></span>October 10, 8am - 10pm <div class="sep"></div> <span class="fa fa-map-marker"></span>Cupertino, CA</span> <hr />
             </div>
@@ -66,7 +72,7 @@
             <div class="hero-normal">Today’s youth hacking tomorrow’s <strong>future.</strong> <br>A 12 hour Hackathon for High School Students</div>
             <a href="https://kvedula.typeform.com/to/EyTxLg" target="blank" class="btn btn-lg btn-3d"><i class="fa fa-play-circle fa-2x"></i> <span>Sign Up</span></a>
 
-			<a href="#about" class="btn btn-sm btn-default">Read More</a>
+			<a href="#about" class="btn btn-sm btn-default" style="color: black;">Read More</a>
           </div>          
         </div>
       </div>
@@ -757,6 +763,194 @@
     
     <div class="back-to-top"><i class="fa fa-angle-up fa-3x"></i></div>
 
+
+<script type="text/javascript">
+(function() {
+
+    var width, height, largeHeader, canvas, ctx, points, target, animateHeader = true;
+
+    // Main
+    initHeader();
+    initAnimation();
+    addListeners();
+
+    function initHeader() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        target = {x: width/2, y: height/2};
+
+        largeHeader = document.getElementById('large-header');
+        largeHeader.style.height = height+'px';
+
+        canvas = document.getElementById('demo-canvas');
+        canvas.width = width;
+        canvas.height = height;
+        ctx = canvas.getContext('2d');
+
+        // create points
+        points = [];
+        for(var x = 0; x < width; x = x + width/20) {
+            for(var y = 0; y < height; y = y + height/20) {
+                var px = x + Math.random()*width/20;
+                var py = y + Math.random()*height/20;
+                var p = {x: px, originX: px, y: py, originY: py };
+                points.push(p);
+            }
+        }
+
+        // for each point find the 5 closest points
+        for(var i = 0; i < points.length; i++) {
+            var closest = [];
+            var p1 = points[i];
+            for(var j = 0; j < points.length; j++) {
+                var p2 = points[j]
+                if(!(p1 == p2)) {
+                    var placed = false;
+                    for(var k = 0; k < 5; k++) {
+                        if(!placed) {
+                            if(closest[k] == undefined) {
+                                closest[k] = p2;
+                                placed = true;
+                            }
+                        }
+                    }
+
+                    for(var k = 0; k < 5; k++) {
+                        if(!placed) {
+                            if(getDistance(p1, p2) < getDistance(p1, closest[k])) {
+                                closest[k] = p2;
+                                placed = true;
+                            }
+                        }
+                    }
+                }
+            }
+            p1.closest = closest;
+        }
+
+        // assign a circle to each point
+        for(var i in points) {
+            var c = new Circle(points[i], 2+Math.random()*2, 'rgba(0,0,0,0.5)');
+            points[i].circle = c;
+        }
+    }
+
+    // Event handling
+    function addListeners() {
+        if(!('ontouchstart' in window)) {
+            window.addEventListener('mousemove', mouseMove);
+        }
+        window.addEventListener('scroll', scrollCheck);
+        window.addEventListener('resize', resize);
+    }
+
+    function mouseMove(e) {
+        var posx = posy = 0;
+        if (e.pageX || e.pageY) {
+            posx = e.pageX;
+            posy = e.pageY;
+        }
+        else if (e.clientX || e.clientY)    {
+            posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+            posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+        }
+        target.x = posx;
+        target.y = posy;
+    }
+
+    function scrollCheck() {
+        if(document.body.scrollTop > height) animateHeader = false;
+        else animateHeader = true;
+    }
+
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        largeHeader.style.height = height+'px';
+        canvas.width = width;
+        canvas.height = height;
+    }
+
+    // animation
+    function initAnimation() {
+        animate();
+        for(var i in points) {
+            shiftPoint(points[i]);
+        }
+    }
+
+    function animate() {
+        if(animateHeader) {
+            ctx.clearRect(0,0,width,height);
+            for(var i in points) {
+                // detect points in range
+                if(Math.abs(getDistance(target, points[i])) < 12000) {
+                    points[i].active = 0.3;
+                    points[i].circle.active = 0.6;
+                } else if(Math.abs(getDistance(target, points[i])) < 80000) {
+                    points[i].active = 0.1;
+                    points[i].circle.active = 0.3;
+                } else if(Math.abs(getDistance(target, points[i])) < 100000) {
+                    points[i].active = 0.02;
+                    points[i].circle.active = 0.1;
+                } else {
+                    points[i].active = 0;
+                    points[i].circle.active = 0;
+                }
+
+                drawLines(points[i]);
+                points[i].circle.draw();
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+
+    function shiftPoint(p) {
+        TweenLite.to(p, 1+1*Math.random(), {x:p.originX-50+Math.random()*100,
+            y: p.originY-50+Math.random()*100, ease:Circ.easeInOut,
+            onComplete: function() {
+                shiftPoint(p);
+            }});
+    }
+
+    // Canvas manipulation
+    function drawLines(p) {
+        if(!p.active) return;
+        for(var i in p.closest) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.closest[i].x, p.closest[i].y);
+            ctx.strokeStyle = 'rgba(230,50,50,'+ p.active+')';
+            ctx.stroke();
+        }
+    }
+
+    function Circle(pos,rad,color) {
+        var _this = this;
+
+        // constructor
+        (function() {
+            _this.pos = pos || null;
+            _this.radius = rad || null;
+            _this.color = color || null;
+        })();
+
+        this.draw = function() {
+            if(!_this.active) return;
+            ctx.beginPath();
+            ctx.arc(_this.pos.x, _this.pos.y, _this.radius, 0, 2 * Math.PI, false);
+            ctx.fillStyle = 'rgba(199,33,33,'+ _this.active+')';
+            ctx.fill();
+        };
+    }
+
+    // Util
+    function getDistance(p1, p2) {
+        return Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2);
+    }
+    
+})();</script>
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
    <script src="Three.js"></script>
 
@@ -780,135 +974,9 @@
     <script type="text/javascript" src="assets/js/color-chooser.js"></script>
 
 
+
 </body>
 
-<script type="text/javascript">
-  
-  // @see http://paulirish.com/2011/requestanimationframe-for-smart-animating/
-  window.requestAnimFrame = (function(){
-      return  window.requestAnimationFrame       || 
-              window.webkitRequestAnimationFrame || 
-              window.mozRequestAnimationFrame    || 
-              window.oRequestAnimationFrame      || 
-              window.msRequestAnimationFrame     || 
-              function(/* function */ callback, /* DOMElement */ element){
-                window.setTimeout(callback, 1000 / 60);
-              };
-    })();
-  // set the scene size
-  var WIDTH = $(window).width(),
-      HEIGHT = $(window).height();;
-  
-  // set some camera attributes
-  var VIEW_ANGLE = 45,
-      ASPECT = WIDTH / HEIGHT,
-      NEAR = 0.1,
-      FAR = 1000;
-  
-  // get the DOM element to attach to
-  // - assume we've got jQuery to hand
-  var $container = $('#beast');
-  
-  // create a WebGL renderer, camera
-  // and a scene
-  var renderer = new THREE.WebGLRenderer();
-  var camera = new THREE.Camera(  VIEW_ANGLE,
-                                  ASPECT,
-                                  NEAR,
-                                  FAR  );
-  var scene = new THREE.Scene();
-  
-  // the camera starts at 0,0,0 so pull it back
-  camera.position.z = 300;
-  
-  // start the renderer - set the clear colour
-  // to a full black
-  //renderer.setClearColor(new THREE.Color(0, 1));
-  renderer.setSize(WIDTH, HEIGHT);
-  
-  // attach the render-supplied DOM element
-  $container.append(renderer.domElement);
-  
-  // create the particle variables
-  var particleCount = 400,
-      particles = new THREE.Geometry(),
-    pMaterial = new THREE.ParticleBasicMaterial({
-      color: 0xFFFFFF,
-      size: 20,
-      map: THREE.ImageUtils.loadTexture(
-        "images/particle.png"
-      ),
-      blending: THREE.AdditiveBlending,
-      transparent: true
-    });
-  
-  // now create the individual particles
-  for(var p = 0; p < particleCount; p++) {
-  
-    // create a particle with random
-    // position values, -250 -> 250
-    var pX = Math.random() * 500 - 250,
-      pY = Math.random() * 500 - 250,
-      pZ = Math.random() * 500 - 250,
-        particle = new THREE.Vertex(
-        new THREE.Vector3(pX, pY, pZ)
-      );
-    // create a velocity vector
-    particle.velocity = new THREE.Vector3(
-      0,        // x
-      -Math.random(), // y
-      0);       // z
 
-    // add it to the geometry
-    particles.vertices.push(particle);
-  }
-  
-  // create the particle system
-  var particleSystem = new THREE.ParticleSystem(
-    particles,
-    pMaterial);
-  
-  particleSystem.sortParticles = true;
-  
-  // add it to the scene
-  scene.addChild(particleSystem);
-  
-  // animation loop
-  function update() {
-    
-    // add some rotation to the system
-    particleSystem.rotation.y += 0.01;
-    
-    var pCount = particleCount;
-    while(pCount--) {
-      // get the particle
-      var particle = particles.vertices[pCount];
-      
-      // check if we need to reset
-      if(particle.position.y < -200) {
-        particle.position.y = 200;
-        particle.velocity.y = 0;
-      }
-      
-      // update the velocity
-      particle.velocity.y -= Math.random() * .1;
-      
-      // and the position
-      particle.position.addSelf(
-        particle.velocity);
-    }
-    
-    // flag to the particle system that we've
-    // changed its vertices. This is the
-    // dirty little secret.
-    particleSystem.geometry.__dirtyVertices = true;
-    
-    renderer.render(scene, camera);
-    
-    // set up the next call
-    requestAnimFrame(update);
-  }
-  requestAnimFrame(update);
-  </script>
 </html>
 <!-- Localized -->
